@@ -188,7 +188,7 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch]) 
                 cur_indicator_weight = int(file_unload.iloc[current_data_row_h_offset, indicator_weight_w_offset])
                 # expected_load += cur_indicator_weight
                 cur_unloaded_weight = int(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset])
-                mistake = cur_indicator_weight - cur_unloaded_weight
+                mistake = cur_unloaded_weight - cur_indicator_weight
                 actual_name = batches[cur_batch_index].name
 
                 batch_stats.update_data(actual_name, mistake, cur_indicator_weight, batches[cur_batch_index].components)

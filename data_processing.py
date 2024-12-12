@@ -15,14 +15,16 @@ field_size_x = 50
 mark_translation = {
     "date": 'Дата',
     "plan_batch_count": "Запланированных замесов",
-    "executed_batch_count": "Выполненных замесов",
+    "executed_batch_count": "Выполненных замесов из плана",
+    "executed_batch_count_all": "Всего выполненных замесов",
+    "executed_batch_count_all_no_mistake": "Всего выполненных замесов без ошибки",
     "plan_completion": 'Выполнение плана',
     "correct_batches_percent": "Процент замесов без превышения ошибки",
-    "load_mark": 'Оценка погрузки',
+    "load_mark": 'Оценка выгрузки',
     "update_received": 'Обновление принято',  # combination with Batch required
     "extra_award": "Премия",  # import json
     "computer_use_mark": 'Использование ПК',
-    "incorrect_batches": "Некорректные замесы",
+    "incorrect_batches": "Замесы сверхплана",
     "worker": 'Рабочий',
 }
 
@@ -32,6 +34,8 @@ valuable_marks: dict[str:list[str]] = {
         "worker",
         "plan_batch_count",
         "executed_batch_count",
+        "executed_batch_count_all",
+        "executed_batch_count_all_no_mistake",
         "correct_batches_percent",
         "plan_completion",
         "load_mark",
@@ -80,8 +84,16 @@ def process_pdf_excel_data(ped: ParsedExcelData, pdf: list[Batch]) -> list[list[
 def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Batch], processed_data: list[list[str]]):
     cur_y = 0
     completed_batches = 0
+    completed_batches_all = 0
     quality_batches = 0
     batch_stats_dict = get_batch_stats_dict(ped)
+
+    for batch_stat in ped.batch_stats:
+        completed_batches_all += 1
+        if batch_stat.quality_check():
+            quality_batches += 1
+
+
 
     marks["plan_batch_count"] = len(pdf)
     for batch in pdf:
@@ -98,7 +110,6 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
             processed_data[cur_y][2] = concatenate_list_values(affiliated_stats.mistakes)
             quality = affiliated_stats.quality_check()
             if quality:
-                quality_batches += 1
                 processed_data[cur_y][3] = "+"
             else:
                 processed_data[cur_y][3] = "-"
@@ -110,11 +121,12 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
         cur_y += 1
 
     marks["executed_batch_count"] = completed_batches
-
+    marks["executed_batch_count_all"] = completed_batches_all
+    marks["executed_batch_count_all_no_mistake"] = quality_batches
     if completed_batches == len(pdf):
         marks["plan_completion"] = "+"
 
-    marks["correct_batches_percent"] = quality_batches / len(pdf) * 100
+    marks["correct_batches_percent"] = quality_batches / completed_batches_all * 100
     if len(pdf) == 0:
         marks["load_mark"] = "+"
     elif quality_batches / len(pdf) >= 0.7:
@@ -190,6 +202,8 @@ def generate_marks():
         "worker": '-',
         "plan_batch_count": 0,
         "executed_batch_count": 0,
+        "executed_batch_count_all": 0,
+        "executed_batch_count_all_no_mistakes": 0,
         "correct_batches_percent": 0,
         "plan_completion": '-',
         "load_mark": '-',
