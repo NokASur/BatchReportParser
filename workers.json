@@ -1,0 +1,50 @@
+{
+  "workers": [
+    {
+      "name": "Алмаз",
+      "excelReportFile": "Алмаз.xls",
+      "pdfReportFile": "Алмаз.pdf",
+      "type": "АКМ"
+    },
+    {
+      "name": "Равис",
+      "excelReportFile": "Равис.xls",
+      "pdfReportFile": "Равис.pdf",
+      "type": "АКМ"
+    },
+    {
+      "name": "Айрат",
+      "excelReportFile": "Айрат.xls",
+      "pdfReportFile": "Айрат.pdf",
+      "type": "АКМ"
+    },
+    {
+      "name": "Радиф",
+      "excelReportFile": "Радиф.xls",
+      "pdfReportFile": "Радиф.pdf",
+      "type": "АКМ"
+    },
+    {
+      "name": "СтКунн",
+      "excelReportFile": "СтКунн.xls",
+      "pdfReportFile": "СтКунн.pdf",
+      "type": "Миксер/Погрузчик"
+    }
+  ],
+  "bonuses": {
+    "АКМ": {
+      "plan_completion": 0,
+      "load_mark": 0,
+      "update_received": 0
+    },
+    "Миксер": {
+      "plan_completion": 0,
+      "load_mark": 0
+    },
+    "Погрузчик": {
+      "plan_completion": 0,
+      "load_mark": 0,
+      "computer_use_mark": 0
+    }
+  }
+}
