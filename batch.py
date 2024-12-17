@@ -2,10 +2,11 @@ from support_funcs import *
 
 
 class ComponentRequirement:
-    def __init__(self, name: str, amount: float, corrected_amount: float = -1) -> None:
+    def __init__(self, name: str, amount: float, corrected_amount: float = -1, actually_loaded_amount: float = -1) -> None:
         self.name = name
         self.amount = amount
         self.corrected_amount = corrected_amount
+        self.actually_loaded_amount = actually_loaded_amount
 
     def __str__(self) -> str:
         return str(self.name) + " " + str(self.amount) + " " + str(self.corrected_amount)
@@ -23,6 +24,7 @@ class ComponentRequirement:
     name: str
     amount: float
     corrected_amount: float
+    actually_loaded_amount: float
 
 
 class Batch:
@@ -55,6 +57,29 @@ class Batch:
         for component in self.components:
             weight += component.amount
         return weight > 50
+
+    # Returns the required weight of all components in a batch if no filter provided.
+    # Otherwise, only for the components found in the filter.
+    def get_req_weight(self, filter: list[str] = []) -> float:
+        weight = 0
+        for component in self.components:
+            if len(filter) > 0 and component.name in filter or len(filter) == 0:
+                weight += component.corrected_amount
+        return weight
+
+    # Returns the actually loaded weight of all components in a batch if no filter provided.
+    # Otherwise, only for the components found in the filter.
+    def get_actual_weight(self, filter: list[str] = []) -> float:
+        weight = 0
+        for component in self.components:
+            if len(filter) > 0 and component.name in filter or len(filter) == 0:
+                weight += component.actually_loaded_amount
+        return weight
+
+    # Returns the load mistake of all components in a batch if no filter provided.
+    # Otherwise, only for the components found in the filter.
+    def get_batch_components_mistake(self, filter: list[str] = []) -> float:
+        return self.get_actual_weight(filter) - self.get_req_weight(filter)
 
     name: str
     components: list[ComponentRequirement]

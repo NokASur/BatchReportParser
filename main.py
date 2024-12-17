@@ -90,6 +90,7 @@ def parse_excel_report_for_akm_batches(file_name: str) -> list[Batch]:
     batch_cmp_name_w_offset = 16
     batch_cmp_weight_req_w_offset = 17
     batch_cmp_weight_req_w_offset_corrected = 20
+    batch_cmp_actual_loaded_weight = 21
     # ----------------------------------------------------
     batch_list: list[Batch] = []
     name = ""
@@ -103,9 +104,16 @@ def parse_excel_report_for_akm_batches(file_name: str) -> list[Batch]:
             component_weight_req = file.iloc[current_data_row_h_offset, batch_cmp_weight_req_w_offset]
             component_weight_req_corrected = file.iloc[
                 current_data_row_h_offset, batch_cmp_weight_req_w_offset_corrected]
+            component_actually_loaded_weight = file.iloc[current_data_row_h_offset, batch_cmp_actual_loaded_weight]
 
             requirements.append(
-                ComponentRequirement(component_name, component_weight_req, component_weight_req_corrected))
+                ComponentRequirement(
+                    component_name,
+                    component_weight_req,
+                    component_weight_req_corrected,
+                    component_actually_loaded_weight
+                )
+            )
 
             if batch_name != name:
                 name = batch_name
@@ -160,179 +168,99 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch]) 
     # current_data_row_h_offset = file_unload[file_unload.iloc[:, unloaded_weight_w_offset] == 'Выгружено'].index[0] + 1
     current_data_row_h_offset = 7
 
-    # data_rows = []
-    #
-    # batch_count = 0
-    # good_batch_count = 0
-    #
-    # data = ['', 0, 'Нет', '']
-    #
-    # mistake = 0
-    # absolute_mistake = 0
-    # all_load = 0
-    # expected_load = 0
-
-    computer_use = '+'
     cur_batch_index = 0
 
-    batch_stats = AKMBatchStats()
+    batch_stats = BasicBatchStats()
+    match worker_type:
+        case "AKM":
+            batch_stats = AKMBatchStats()
+
+        case "Миксер":
+            batch_stats = MixerBatchStats()
+
+        case "Погрузчик":
+            batch_stats = LoaderBatchStats()
+
     batch_stats_list = []
 
     while current_data_row_h_offset < file_unload.shape[0]:
         if worker_type == "АКМ":
-
             if type(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]) == int:
-
-                # cur_tech_group = remove_extra_spaces(
-                #     str(file_unload.iloc[current_data_row_h_offset, tech_group_name_w_offset]).strip())
                 cur_indicator_weight = int(file_unload.iloc[current_data_row_h_offset, indicator_weight_w_offset])
-                # expected_load += cur_indicator_weight
                 cur_unloaded_weight = int(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset])
                 mistake = cur_unloaded_weight - cur_indicator_weight
                 actual_name = batches[cur_batch_index].name
 
                 batch_stats.update_data(actual_name, mistake, cur_indicator_weight, batches[cur_batch_index].components)
 
-                # data[0] += (", " if data[0].__len__() > 0 else "") + actual_name
-                # data[1] += abs_mistake
-                # data[2] = "Да" if data[1] > 30 else "Нет"
-                # data[3] += (", " if data[3].__len__() > 0 else "") + str(mistake) + "кг"
-
                 if current_data_row_h_offset == file_unload.shape[0] - 1:
                     batch_stats_list.append(batch_stats)
                     batch_stats = AKMBatchStats()
-                    # if expected_load > 50:
-                    #     data, data_rows, batch_count, good_batch_count = \
-                    #         append_data_row(data, data_rows, batch_count, good_batch_count)
-                    # expected_load = 0
 
             else:
                 batch_stats_list.append(batch_stats)
                 batch_stats = AKMBatchStats()
                 cur_batch_index += 1
-                # if expected_load > 50:
-                #     data, data_rows, batch_count, good_batch_count = \
-                #         append_data_row(data, data_rows, batch_count, good_batch_count)
-                # expected_load = 0
 
-        # elif worker_type == "Миксер":
-        #
-        #     components = [
-        #         "К/корм СУХ1",
-        #         "К/корм Высокий",
-        #         "Патока",
-        #         "Вода",
-        #     ]
-        #
-        #     if type(file_unload.iloc[current_data_row_h_offset, req_load_weight_w_offset]) == int:
-        #         # cur_tech_group = remove_extra_spaces(
-        #         #     str(file_unload.iloc[current_data_row_h_offset, batch_group_name_w_offset]).strip())
-        #         cur_component_name = remove_extra_spaces(
-        #             str(file_unload.iloc[current_data_row_h_offset, load_components_w_offset]).strip())
-        #         cur_comp_req_weight = int(file_unload.iloc[current_data_row_h_offset, req_load_weight_w_offset])
-        #         cur_unloaded_weight = int(file_unload.iloc[current_data_row_h_offset, actual_load_weight_w_offset])
-        #         actual_name = batches[cur_batch_index].name
-        #         cur_batch_index += 1
-        #
-        #         if cur_component_name in components:
-        #             if data[0] != actual_name:
-        #                 data[0] += actual_name
-        #             mistake += cur_comp_req_weight - cur_unloaded_weight
-        #             absolute_mistake += abs(cur_comp_req_weight - cur_unloaded_weight)
-        #             all_load += cur_unloaded_weight
-        #
-        #         if current_data_row_h_offset == file_unload.shape[0] - 1:
-        #             overall_mistake = 0
-        #             if all_load != 0:
-        #                 overall_mistake = absolute_mistake / all_load * 100
-        #
-        #             mistake = 0
-        #             absolute_mistake = 0
-        #             all_load = 0
-        #             if overall_mistake > 5:
-        #                 data[2] = "Да"
-        #             data[3] = str(overall_mistake) + "%"
-        #
-        #             data, data_rows, batch_count, good_batch_count = \
-        #                 append_data_row(data, data_rows, batch_count, good_batch_count)
-        #     else:
-        #         overall_mistake = 0
-        #         if all_load != 0:
-        #             overall_mistake = absolute_mistake / all_load * 100
-        #
-        #         mistake = 0
-        #         absolute_mistake = 0
-        #         all_load = 0
-        #         if overall_mistake > 5:
-        #             data[2] = "Да"
-        #         data[3] = str(overall_mistake) + "%"
-        #         data, data_rows, batch_count, good_batch_count = \
-        #             append_data_row(data, data_rows, batch_count, good_batch_count)
-        #
-        # elif worker_type == "Погрузчик":
-        #
-        #     components = [
-        #         "Солома Пш",
-        #         "Сенаж яма",
-        #         "Силос Тукаевский",
-        #         "Силос",
-        #         "Смесь мясо+барда",
-        #         "Сухая Барда",
-        #         "Рапс.шрот",
-        #         "Птичья мука",
-        #     ]
-        #
-        #     if type(file_unload.iloc[current_data_row_h_offset, req_load_weight_w_offset]) == int:
-        #         # cur_tech_group = remove_extra_spaces(
-        #         #     str(file_unload.iloc[current_data_row_h_offset, batch_group_name_w_offset]).strip())
-        #         cur_component_name = remove_extra_spaces(
-        #             str(file_unload.iloc[current_data_row_h_offset, load_components_w_offset]).strip())
-        #         cur_comp_req_weight = int(file_unload.iloc[current_data_row_h_offset, req_load_weight_w_offset])
-        #         cur_unloaded_weight = int(file_unload.iloc[current_data_row_h_offset, actual_load_weight_w_offset])
-        #         actual_name = batches[cur_batch_index].name
-        #         cur_batch_index += 1
-        #
-        #         if cur_component_name in components:
-        #             if data[0] != actual_name:
-        #                 data[0] += actual_name
-        #
-        #             if cur_unloaded_weight == 0:
-        #                 computer_use = "-"
-        #             mistake += cur_comp_req_weight - cur_unloaded_weight
-        #             absolute_mistake += abs(cur_comp_req_weight - cur_unloaded_weight)
-        #             all_load += cur_unloaded_weight
-        #
-        #         if current_data_row_h_offset == file_unload.shape[0] - 1:
-        #             overall_mistake = 0
-        #             if all_load != 0:
-        #                 overall_mistake = absolute_mistake / all_load * 100
-        #             mistake = 0
-        #             absolute_mistake = 0
-        #             all_load = 0
-        #             if overall_mistake > 2:
-        #                 data[2] = "Да"
-        #             data[3] = str(overall_mistake) + "%"
-        #             data, data_rows, batch_count, good_batch_count = \
-        #                 append_data_row(data, data_rows, batch_count, good_batch_count)
-        #     else:
-        #         overall_mistake = 0
-        #         if all_load != 0:
-        #             overall_mistake = absolute_mistake / all_load * 100
-        #         mistake = 0
-        #         absolute_mistake = 0
-        #         all_load = 0
-        #         if overall_mistake > 2:
-        #             data[2] = "Да"
-        #         data[3] = str(overall_mistake) + "%"
-        #         data, data_rows, batch_count, good_batch_count = \
-        #             append_data_row(data, data_rows, batch_count, good_batch_count)
+        elif worker_type == "Миксер":
+
+            components = [
+                "К/корм СУХ1",
+                "К/корм Высокий",
+                "Патока",
+                "Вода",
+            ]
+
+            if not pd.isna(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]):
+                # cur_tech_group = remove_extra_spaces(
+                #     str(file_unload.iloc[current_data_row_h_offset, batch_group_name_w_offset]).strip())
+                # cur_component_name = remove_extra_spaces(
+                #     str(file_unload.iloc[current_data_row_h_offset, load_components_w_offset]).strip())
+                # cur_comp_req_weight = int(file_unload.iloc[current_data_row_h_offset, req_load_weight_w_offset])
+                # cur_unloaded_weight = int(file_unload.iloc[current_data_row_h_offset, actual_load_weight_w_offset])
+
+                cur_req_weight = batches[cur_batch_index].get_req_weight(components)
+                mistake = batches[cur_batch_index].get_batch_components_mistake(components)
+                actual_name = batches[cur_batch_index].name
+
+                batch_stats.update_data(actual_name, mistake, cur_req_weight, batches[cur_batch_index].components)
+
+                if current_data_row_h_offset == file_unload.shape[0] - 1:
+                    batch_stats_list.append(batch_stats)
+                    batch_stats = MixerBatchStats()
+            else:
+                batch_stats_list.append(batch_stats)
+                batch_stats = MixerBatchStats()
+                cur_batch_index += 1
+
+        elif worker_type == "Погрузчик":
+
+            components = [
+                "Солома Пш",
+                "Сенаж яма",
+                "Силос Тукаевский",
+                "Силос",
+                "Смесь мясо+барда",
+                "Сухая Барда",
+                "Рапс.шрот",
+                "Птичья мука",
+            ]
+            if not pd.isna(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]):
+                cur_req_weight = batches[cur_batch_index].get_req_weight(components)
+                mistake = batches[cur_batch_index].get_batch_components_mistake(components)
+                actual_name = batches[cur_batch_index].name
+
+                batch_stats.update_data(actual_name, mistake, cur_req_weight, batches[cur_batch_index].components)
+
+                if current_data_row_h_offset == file_unload.shape[0] - 1:
+                    batch_stats_list.append(batch_stats)
+                    batch_stats = LoaderBatchStats()
+            else:
+                batch_stats_list.append(batch_stats)
+                batch_stats = LoaderBatchStats()
+                cur_batch_index += 1
 
         current_data_row_h_offset += 1
-
-    # correctness_percent = good_batch_count / batch_count * 100
-    # incorrectness_percent = 100 - correctness_percent
-    # parsed_data = ParsedExcelData(data_rows, correctness_percent, incorrectness_percent, date, batch_count,
-    #                               worker_name, data_columns, computer_use)
 
     parsed_data2 = ParsedExcelData(batch_stats_list, date, worker_name)
 

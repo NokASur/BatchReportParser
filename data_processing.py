@@ -6,7 +6,6 @@ from BatchStats.MixerBatchStats import MixerBatchStats
 from BatchStats.LoaderBatchStats import LoaderBatchStats
 from support_funcs import concatenate_list_values, imprint_meta_values_to_sheet
 from queue import Queue
-from typing import Dict
 
 # Affected size of the Excel sheet
 field_size_y = 50
@@ -47,6 +46,8 @@ valuable_marks: dict[str:list[str]] = {
         "date",
         "plan_batch_count",
         "executed_batch_count",
+        "executed_batch_count_all",
+        "executed_batch_count_all_no_mistake",
         "correct_batches_percent",
         "plan_completion",
         "load_mark",
@@ -54,6 +55,19 @@ valuable_marks: dict[str:list[str]] = {
         "incorrect_batches",
     ],
     "LoaderBatchStats": [
+        "date",
+        "plan_batch_count",
+        "executed_batch_count",
+        "executed_batch_count_all",
+        "executed_batch_count_all_no_mistake",
+        "correct_batches_percent",
+        "plan_completion",
+        "load_mark",
+        "computer_use_mark",
+        "extra_award",
+        "incorrect_batches",
+    ],
+    "BasicBatchStats": [
         "date",
         "plan_batch_count",
         "executed_batch_count",
@@ -88,37 +102,87 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
     quality_batches = 0
     batch_stats_dict = get_batch_stats_dict(ped)
 
+    batch_type = "BasicBatchStats"
+
     for batch_stat in ped.batch_stats:
+
+        if batch_type == "BasicBatchStats":
+            batch_type = batch_stat.__class__.__name__
+
         completed_batches_all += 1
         if batch_stat.quality_check():
             quality_batches += 1
 
-
-
     marks["plan_batch_count"] = len(pdf)
     for batch in pdf:
         processed_data[cur_y][0] = batch.name
-        affiliated_stats = get_affiliated_batch_stats(batch_stats_dict, batch.name)
-        if affiliated_stats is not None:
-            completed_batches += 1
+        affiliated_stats: BasicBatchStats|AKMBatchStats|LoaderBatchStats|MixerBatchStats = get_affiliated_batch_stats(batch_stats_dict, batch.name)
 
-            #  залупа
-            if affiliated_stats.overall_weight != 0:
-                marks["computer_use_mark"] = "-"
+        match batch_type:
+            case "AKMBatchStats":
+                if affiliated_stats is not None:
+                    completed_batches += 1
+                    #  ???
+                    if affiliated_stats.overall_weight == 0:
+                        marks["computer_use_mark"] = "-"
 
-            processed_data[cur_y][1] = "+"
-            processed_data[cur_y][2] = concatenate_list_values(affiliated_stats.mistakes)
-            quality = affiliated_stats.quality_check()
-            if quality:
-                processed_data[cur_y][3] = "+"
-            else:
-                processed_data[cur_y][3] = "-"
-        else:
-            processed_data[cur_y][1] = "-"
-            processed_data[cur_y][2] = "0"
-            processed_data[cur_y][3] = "+"
+                    processed_data[cur_y][1] = "+"
+                    processed_data[cur_y][2] = concatenate_list_values(affiliated_stats.mistakes)
+                    quality = affiliated_stats.quality_check()
+                    if quality:
+                        processed_data[cur_y][3] = "+"
+                    else:
+                        processed_data[cur_y][3] = "-"
+                else:
+                    processed_data[cur_y][1] = "-"
+                    processed_data[cur_y][2] = "0"
+                    processed_data[cur_y][3] = "+"
 
-        cur_y += 1
+                cur_y += 1
+            case "MixerBatchStats":
+                if affiliated_stats is not None:
+                    completed_batches += 1
+                    #  ???
+                    if affiliated_stats.overall_weight == 0:
+                        marks["computer_use_mark"] = "-"
+
+                    processed_data[cur_y][1] = "+"
+                    processed_data[cur_y][2] = concatenate_list_values(affiliated_stats.mistakes)
+                    processed_data[cur_y][3] = str(affiliated_stats.get_abs_mistake_percentage())
+                    quality = affiliated_stats.quality_check()
+                    if quality:
+                        processed_data[cur_y][4] = "+"
+                    else:
+                        processed_data[cur_y][4] = "-"
+                else:
+                    processed_data[cur_y][1] = "-"
+                    processed_data[cur_y][2] = "0"
+                    processed_data[cur_y][3] = "0"
+                    processed_data[cur_y][4] = "+"
+
+                cur_y += 1
+            case "LoaderBatchStats":
+                if affiliated_stats is not None:
+                    completed_batches += 1
+                    #  ???
+                    if affiliated_stats.overall_weight == 0:
+                        marks["computer_use_mark"] = "-"
+
+                    processed_data[cur_y][1] = "+"
+                    processed_data[cur_y][2] = concatenate_list_values(affiliated_stats.mistakes)
+                    processed_data[cur_y][3] = str(affiliated_stats.get_abs_mistake_percentage())
+                    quality = affiliated_stats.quality_check()
+                    if quality:
+                        processed_data[cur_y][4] = "+"
+                    else:
+                        processed_data[cur_y][4] = "-"
+                else:
+                    processed_data[cur_y][1] = "-"
+                    processed_data[cur_y][2] = "0"
+                    processed_data[cur_y][3] = "0"
+                    processed_data[cur_y][4] = "+"
+
+                cur_y += 1
 
     marks["executed_batch_count"] = completed_batches
     marks["executed_batch_count_all"] = completed_batches_all
@@ -126,11 +190,14 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
     if completed_batches == len(pdf):
         marks["plan_completion"] = "+"
 
-    marks["correct_batches_percent"] = quality_batches / completed_batches_all * 100
-    if len(pdf) == 0:
+    if completed_batches_all != 0:
+        marks["correct_batches_percent"] = quality_batches / completed_batches_all * 100
+    else:
+        marks["correct_batches_percent"] = 100
+
+    if marks["correct_batches_percent"] >= 70:
         marks["load_mark"] = "+"
-    elif quality_batches / len(pdf) >= 0.7:
-        marks["load_mark"] = "+"
+
     marks["incorrect_batches"] = get_incorrect_batches_list(ped, pdf)
     if len(marks["incorrect_batches"]) > 0:
         marks["update_received"] = '-'
@@ -218,11 +285,13 @@ def generate_data_columns(ped: ParsedExcelData) -> list[str]:
     data_columns = ["" for _ in range(field_size_x)]
     match ped.type():
         case "AKMBatchStats":
-            columns = ["Название замеса", "Выполнение", "Ошибка оператора", "Ошибка не превышает 30 кг"]
+            columns = ["Название замеса", "Выполнение", "Ошибка оператора", "Ошибка не превышает 30кг"]
         case "MixerBatchStats":
-            columns = ["Название замеса", "Ошибка оператора, %", "Ошибка превышает 5%"]
+            columns = ["Название замеса", "Выполнение", "Ошибка оператора", "Ошибка в процентах",
+                       "Ошибка не превышает 5%"]
         case "LoaderBatchStats":
-            columns = ["Название замеса", "Ошибка оператора, %", "Ошибка превышает 2%"]
+            columns = ["Название замеса", "Выполнение", "Ошибка оператора", "Ошибка в процентах",
+                       "Ошибка не превышает 2%"]
         case "BasicBatchStats":
             columns = ["Empty stats or incorrect stats type"]
         case _:
