@@ -272,10 +272,8 @@ def evaluate_guy(writer, sheet_names: list[str], excel_file: str, pdf_file: str,
     # All parsing
     # --------------------------------------------------------------------------------------
     planned_batch_list: list[Batch] = parse_pdf_report_for_akm_batches(pdf_file)
-    planned_batch_count = planned_batch_list.__len__()
 
     executed_batch_list = parse_excel_report_for_akm_batches(excel_file)
-    sorted_batch_list = sorted(executed_batch_list)
 
     excel_parsed_data_list: list[ParsedExcelData] = []
 
@@ -292,115 +290,11 @@ def evaluate_guy(writer, sheet_names: list[str], excel_file: str, pdf_file: str,
     # --------------------------------------------------------------------------------------
     for sheet_name, parsed_data in zip(sheet_names, excel_parsed_data_list):
         processed_data = process_pdf_excel_data(parsed_data, planned_batch_list)
-        #
-        # bonuses = {
-        #     "plan_completion": '-',
-        #     "load_mark": '-',
-        #     "update_received": '-',
-        #     "extra_award": 0,
-        #     "computer_use_mark": '-',
-        #     "incorrect_batches": [],
-        # }
-        #
-        # if parsed_data.batch_count == planned_batch_count:
-        #     bonuses["plan_completion"] = '+'
-        #
-        # if parsed_data.incorrectness_percent <= 30:
-        #     bonuses["load_mark"] = '+'
-        #
-        # if sheet_name == "Погрузчик":
-        #     bonuses["computer_use_mark"] = parsed_data.computer_use
-        # elif sheet_name == "Миксер":
-        #     pass
-        # else:
-        #     if sorted_batch_list == sorted(planned_batch_list):
-        #         bonuses["update_received"] = '+'
-        #     else:
-        #         for ex_batch in sorted_batch_list:
-        #             bad = 1
-        #             for pl_batch in planned_batch_list:
-        #                 if ex_batch == pl_batch:
-        #                     bad = 0
-        #                     break
-        #             if bad == 1:
-        #                 bonuses["incorrect_batches"].append(ex_batch.name)
-        #
-        # file = open("workers.json", 'r', encoding='utf-8')
-        #
-        # bonuses_data = json.load(file)["bonuses"]
-        # file.close()
-        #
-        # if bonuses["load_mark"] == '+' and bonuses["plan_completion"] == '+':
-        #     current_bonuses: dict = {}
-        #     if worker_type == "АКМ":
-        #         current_bonuses = bonuses_data[worker_type]
-        #     elif worker_type == "Миксер/Погрузчик":
-        #         current_bonuses = bonuses_data[sheet_name]
-        #
-        #     for bonus_type, value in current_bonuses.items():
-        #         if bonuses[bonus_type] == '+':
-        #             bonuses["extra_award"] += value
-        #
-        # meta_values = {
-        #     "АКМ": [
-        #         ["Дата:", parsed_data.date],
-        #         [],
-        #         ["Планируемое количество замесов", "Фактическое количество замесов"],
-        #         [planned_batch_count, parsed_data.batch_count],
-        #         ["Процент корректности", "Процент ошибок"],
-        #         [parsed_data.correctness_percent, parsed_data.incorrectness_percent],
-        #         [],
-        #         ["Ответственный:", worker_name],
-        #         ["Выполнение плана:", bonuses["plan_completion"]],
-        #         ["Оценка погрузок:", bonuses["load_mark"]],
-        #         ["Оценка получения обновления:", bonuses["update_received"]],
-        #         ["Премия:", bonuses["extra_award"]],
-        #         [],
-        #         ["Необновленные/Некорректные замесы:", *bonuses["incorrect_batches"]],
-        #     ],
-        #     "Миксер": [
-        #         ["Дата:", parsed_data.date],
-        #         [],
-        #         ["Планируемое количество замесов", "Фактическое количество замесов"],
-        #         [planned_batch_count, parsed_data.batch_count],
-        #         ["Процент корректности", "Процент ошибок"],
-        #         [parsed_data.correctness_percent, parsed_data.incorrectness_percent],
-        #         [],
-        #         ["Ответственный:", worker_name],
-        #         ["Выполнение плана:", bonuses["plan_completion"]],
-        #         ["Оценка погрузок:", bonuses["load_mark"]],
-        #         [],
-        #         ["Премия:", bonuses["extra_award"]],
-        #         [],
-        #         ["Необновленные/Некорректные замесы:", *bonuses["incorrect_batches"]],
-        #     ],
-        #     "Погрузчик": [
-        #         ["Дата:", parsed_data.date],
-        #         [],
-        #         ["Планируемое количество замесов", "Фактическое количество замесов"],
-        #         [planned_batch_count, parsed_data.batch_count],
-        #         ["Процент корректности", "Процент ошибок"],
-        #         [parsed_data.correctness_percent, parsed_data.incorrectness_percent],
-        #         [],
-        #         ["Ответственный:", worker_name],
-        #         ["Выполнение плана:", bonuses["plan_completion"]],
-        #         ["Оценка погрузок:", bonuses["load_mark"]],
-        #         ["Оценка правильности использования компьютера:", bonuses["computer_use_mark"]],
-        #         ["Премия:", bonuses["extra_award"]],
-        #         [],
-        #         ["Необновленные/Некорректные замесы:", *bonuses["incorrect_batches"]],
-        #     ],
-        # }
-        # meta_value = meta_values["АКМ"]
-        # if sheet_names.__len__() > 1:
-        #     meta_value = meta_values[sheet_name]
 
         data_df = pd.DataFrame(data=processed_data)
         data_df.columns = generate_data_columns(parsed_data)
         data_df.to_excel(writer, index=False, sheet_name=sheet_name)
 
-        # imprint_meta_values_to_sheet(writer.sheets[sheet_name], meta_value, 1, 5)
-        # imprint_meta_values_to_sheet(writer.sheets[sheet_name], processed_data)
         adjust_excel_cells_length(writer, sheet_name)
 
 

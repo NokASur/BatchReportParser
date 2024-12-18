@@ -20,6 +20,7 @@ mark_translation = {
     "plan_completion": 'Выполнение плана',
     "correct_batches_percent": "Процент замесов без превышения ошибки",
     "load_mark": 'Оценка выгрузки',
+    "loader_mark": 'Оценка загрузки',
     "update_received": 'Обновление принято',  # combination with Batch required
     "extra_award": "Премия",  # import json
     "computer_use_mark": 'Использование ПК',
@@ -62,7 +63,7 @@ valuable_marks: dict[str:list[str]] = {
         "executed_batch_count_all_no_mistake",
         "correct_batches_percent",
         "plan_completion",
-        "load_mark",
+        "loader_mark",
         "computer_use_mark",
         "extra_award",
         "incorrect_batches",
@@ -116,7 +117,8 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
     marks["plan_batch_count"] = len(pdf)
     for batch in pdf:
         processed_data[cur_y][0] = batch.name
-        affiliated_stats: BasicBatchStats|AKMBatchStats|LoaderBatchStats|MixerBatchStats = get_affiliated_batch_stats(batch_stats_dict, batch.name)
+        affiliated_stats: BasicBatchStats | AKMBatchStats | LoaderBatchStats | MixerBatchStats = get_affiliated_batch_stats(
+            batch_stats_dict, batch.name)
 
         match batch_type:
             case "AKMBatchStats":
@@ -148,7 +150,7 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
 
                     processed_data[cur_y][1] = "+"
                     processed_data[cur_y][2] = concatenate_list_values(affiliated_stats.mistakes)
-                    processed_data[cur_y][3] = str(affiliated_stats.get_abs_mistake_percentage())
+                    processed_data[cur_y][3] = str(round(affiliated_stats.get_abs_mistake_percentage(), 2))
                     quality = affiliated_stats.quality_check()
                     if quality:
                         processed_data[cur_y][4] = "+"
@@ -170,7 +172,7 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
 
                     processed_data[cur_y][1] = "+"
                     processed_data[cur_y][2] = concatenate_list_values(affiliated_stats.mistakes)
-                    processed_data[cur_y][3] = str(affiliated_stats.get_abs_mistake_percentage())
+                    processed_data[cur_y][3] = str(round(affiliated_stats.get_abs_mistake_percentage(), 2))
                     quality = affiliated_stats.quality_check()
                     if quality:
                         processed_data[cur_y][4] = "+"
@@ -197,6 +199,9 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
 
     if marks["correct_batches_percent"] >= 70:
         marks["load_mark"] = "+"
+
+    if batch_type == "LoaderBatchStats" and marks["correct_batches_percent"] >= 70:
+        marks['loader_mark'] = '+'
 
     marks["incorrect_batches"] = get_incorrect_batches_list(ped, pdf)
     if len(marks["incorrect_batches"]) > 0:
@@ -274,6 +279,7 @@ def generate_marks():
         "correct_batches_percent": 0,
         "plan_completion": '-',
         "load_mark": '-',
+        "loader_mark": '-',
         "update_received": '+',  # combination with Batch required
         "extra_award": 0,  # import json
         "computer_use_mark": '+',
