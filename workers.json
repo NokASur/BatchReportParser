@@ -29,6 +29,12 @@
       "excelReportFile": "СтКунн.xls",
       "pdfReportFile": "СтКунн.pdf",
       "type": "Миксер/Погрузчик"
+    },
+    {
+      "name": "Комбикорм",
+      "excelReportFile": "Комбикорм.xls",
+      "pdfReportFile": null,
+      "type": "Комбикорм"
     }
   ],
   "bonuses": {
@@ -43,6 +49,10 @@
     },
     "Погрузчик": {
       "plan_completion": 0,
+      "load_mark": 0,
+      "computer_use_mark": 0
+    },
+    "Комбикорм": {
       "load_mark": 0,
       "computer_use_mark": 0
     }

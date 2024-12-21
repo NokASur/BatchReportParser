@@ -15,8 +15,3 @@ class MixerBatchStats(BasicBatchStats):
 
     def is_completed(self) -> bool:
         return True
-
-    def get_abs_mistake_percentage(self) -> float:
-        if self.overall_weight == 0:
-            return 0
-        return self.abs_mistake / self.overall_weight * 100

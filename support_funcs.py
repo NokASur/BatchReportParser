@@ -37,4 +37,4 @@ def adjust_excel_cells_length(writer, sheet_name: str):
                     max_length = max(max_length, len(str(cell.value)))
             except Exception as e:
                 print(f"Ошибка при обработке ячейки: {e}")
-        sheet.column_dimensions[column_letter].width = max_length + 2
+        sheet.column_dimensions[column_letter].width = max_length + 5

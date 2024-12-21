@@ -4,6 +4,7 @@ from BatchStats.AKMBatchStats import AKMBatchStats
 from BatchStats.BasicBatchStats import BasicBatchStats
 from BatchStats.MixerBatchStats import MixerBatchStats
 from BatchStats.LoaderBatchStats import LoaderBatchStats
+from BatchStats.CombBatchStats import CombBatchStats
 from support_funcs import concatenate_list_values, imprint_meta_values_to_sheet
 from queue import Queue
 
@@ -26,9 +27,18 @@ mark_translation = {
     "computer_use_mark": 'Использование ПК',
     "incorrect_batches": "Замесы сверхплана",
     "worker": 'Рабочий',
+    "percentage of batches with an error in mixing time": "Процент замесов с ошибкой во времени замешивания",
 }
 
 valuable_marks: dict[str:list[str]] = {
+
+    "CombBatchStats": [
+        "date",
+        "executed_batch_count_all",
+        "executed_batch_count_all_no_mistake",
+        "percentage of batches with an error in mixing time",
+        "computer_use_mark",
+    ],
     "AKMBatchStats": [
         "date",
         "worker",
@@ -115,76 +125,87 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
             quality_batches += 1
 
     marks["plan_batch_count"] = len(pdf)
-    for batch in pdf:
-        processed_data[cur_y][0] = batch.name
-        affiliated_stats: BasicBatchStats | AKMBatchStats | LoaderBatchStats | MixerBatchStats = get_affiliated_batch_stats(
-            batch_stats_dict, batch.name)
 
-        match batch_type:
-            case "AKMBatchStats":
-                if affiliated_stats is not None:
-                    completed_batches += 1
-                    #  ???
-                    if affiliated_stats.overall_weight == 0:
-                        marks["computer_use_mark"] = "-"
+    if batch_type == "CombBatchStats":
+        # Show all the batches because there are no pdf/planned ones
 
-                    processed_data[cur_y][1] = "+"
-                    processed_data[cur_y][2] = concatenate_list_values(affiliated_stats.mistakes)
-                    quality = affiliated_stats.quality_check()
-                    if quality:
+        for batch_stat in ped.batch_stats:
+            processed_data[cur_y][0] = batch_stat.name
+
+            cur_y += 1
+    else:
+        # Show only those that are planned with the notion if they are completed or not
+
+        for batch in pdf:
+            processed_data[cur_y][0] = batch.name
+            affiliated_stats: BasicBatchStats | AKMBatchStats | LoaderBatchStats | MixerBatchStats = get_affiliated_batch_stats(
+                batch_stats_dict, batch.name)
+
+            match batch_type:
+                case "AKMBatchStats":
+                    if affiliated_stats is not None:
+                        completed_batches += 1
+                        #  ???
+                        if affiliated_stats.overall_weight == 0:
+                            marks["computer_use_mark"] = "-"
+
+                        processed_data[cur_y][1] = "+"
+                        processed_data[cur_y][2] = concatenate_list_values(affiliated_stats.mistakes)
+                        quality = affiliated_stats.quality_check()
+                        if quality:
+                            processed_data[cur_y][3] = "+"
+                        else:
+                            processed_data[cur_y][3] = "-"
+                    else:
+                        processed_data[cur_y][1] = "-"
+                        processed_data[cur_y][2] = "0"
                         processed_data[cur_y][3] = "+"
+
+                    cur_y += 1
+                case "MixerBatchStats":
+                    if affiliated_stats is not None:
+                        completed_batches += 1
+                        #  ???
+                        if affiliated_stats.overall_weight == 0:
+                            marks["computer_use_mark"] = "-"
+
+                        processed_data[cur_y][1] = "+"
+                        processed_data[cur_y][2] = concatenate_list_values(affiliated_stats.mistakes)
+                        processed_data[cur_y][3] = str(round(affiliated_stats.get_abs_mistake_percentage(), 2))
+                        quality = affiliated_stats.quality_check()
+                        if quality:
+                            processed_data[cur_y][4] = "+"
+                        else:
+                            processed_data[cur_y][4] = "-"
                     else:
-                        processed_data[cur_y][3] = "-"
-                else:
-                    processed_data[cur_y][1] = "-"
-                    processed_data[cur_y][2] = "0"
-                    processed_data[cur_y][3] = "+"
-
-                cur_y += 1
-            case "MixerBatchStats":
-                if affiliated_stats is not None:
-                    completed_batches += 1
-                    #  ???
-                    if affiliated_stats.overall_weight == 0:
-                        marks["computer_use_mark"] = "-"
-
-                    processed_data[cur_y][1] = "+"
-                    processed_data[cur_y][2] = concatenate_list_values(affiliated_stats.mistakes)
-                    processed_data[cur_y][3] = str(round(affiliated_stats.get_abs_mistake_percentage(), 2))
-                    quality = affiliated_stats.quality_check()
-                    if quality:
+                        processed_data[cur_y][1] = "-"
+                        processed_data[cur_y][2] = "0"
+                        processed_data[cur_y][3] = "0"
                         processed_data[cur_y][4] = "+"
+
+                    cur_y += 1
+                case "LoaderBatchStats":
+                    if affiliated_stats is not None:
+                        completed_batches += 1
+                        #  ???
+                        if affiliated_stats.overall_weight == 0:
+                            marks["computer_use_mark"] = "-"
+
+                        processed_data[cur_y][1] = "+"
+                        processed_data[cur_y][2] = concatenate_list_values(affiliated_stats.mistakes)
+                        processed_data[cur_y][3] = str(round(affiliated_stats.get_abs_mistake_percentage(), 2))
+                        quality = affiliated_stats.quality_check()
+                        if quality:
+                            processed_data[cur_y][4] = "+"
+                        else:
+                            processed_data[cur_y][4] = "-"
                     else:
-                        processed_data[cur_y][4] = "-"
-                else:
-                    processed_data[cur_y][1] = "-"
-                    processed_data[cur_y][2] = "0"
-                    processed_data[cur_y][3] = "0"
-                    processed_data[cur_y][4] = "+"
-
-                cur_y += 1
-            case "LoaderBatchStats":
-                if affiliated_stats is not None:
-                    completed_batches += 1
-                    #  ???
-                    if affiliated_stats.overall_weight == 0:
-                        marks["computer_use_mark"] = "-"
-
-                    processed_data[cur_y][1] = "+"
-                    processed_data[cur_y][2] = concatenate_list_values(affiliated_stats.mistakes)
-                    processed_data[cur_y][3] = str(round(affiliated_stats.get_abs_mistake_percentage(), 2))
-                    quality = affiliated_stats.quality_check()
-                    if quality:
+                        processed_data[cur_y][1] = "-"
+                        processed_data[cur_y][2] = "0"
+                        processed_data[cur_y][3] = "0"
                         processed_data[cur_y][4] = "+"
-                    else:
-                        processed_data[cur_y][4] = "-"
-                else:
-                    processed_data[cur_y][1] = "-"
-                    processed_data[cur_y][2] = "0"
-                    processed_data[cur_y][3] = "0"
-                    processed_data[cur_y][4] = "+"
 
-                cur_y += 1
+                    cur_y += 1
 
     marks["executed_batch_count"] = completed_batches
     marks["executed_batch_count_all"] = completed_batches_all
@@ -284,6 +305,7 @@ def generate_marks():
         "extra_award": 0,  # import json
         "computer_use_mark": '+',
         "incorrect_batches": [],
+        "percentage of batches with an error in mixing time": 0,
     }
 
 
@@ -291,13 +313,39 @@ def generate_data_columns(ped: ParsedExcelData) -> list[str]:
     data_columns = ["" for _ in range(field_size_x)]
     match ped.type():
         case "AKMBatchStats":
-            columns = ["Название замеса", "Выполнение", "Ошибка оператора", "Ошибка не превышает 30кг"]
+            columns = [
+                "Название замеса",
+                "Выполнение",
+                "Ошибка оператора",
+                "Ошибка не превышает 30кг",
+            ]
         case "MixerBatchStats":
-            columns = ["Название замеса", "Выполнение", "Ошибка оператора", "Ошибка в процентах",
-                       "Ошибка не превышает 5%"]
+            columns = [
+                "Название замеса",
+                "Выполнение",
+                "Ошибка оператора",
+                "Ошибка в процентах",
+                "Ошибка не превышает 5%",
+            ]
         case "LoaderBatchStats":
-            columns = ["Название замеса", "Выполнение", "Ошибка оператора", "Ошибка в процентах",
-                       "Ошибка не превышает 2%"]
+            columns = [
+                "Название замеса",
+                "Выполнение",
+                "Ошибка оператора",
+                "Ошибка в процентах",
+                "Ошибка не превышает 2%",
+            ]
+        case "CombBatchStats":
+            columns = [
+                "Название замеса",
+                "Ошибка в кг",
+                "Ошибка в %",
+                "Компонент с наибольшей ошибкой в кг",
+                "Компонент с наибольшей ошибкой в %",
+                "Время начала замеса",
+                "Время конца замеса",
+                "Время смешивания",
+            ]
         case "BasicBatchStats":
             columns = ["Empty stats or incorrect stats type"]
         case _:

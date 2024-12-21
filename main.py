@@ -6,7 +6,6 @@ import pdfplumber
 import json
 import os
 
-from BatchStats.AKMBatchStats import AKMBatchStats
 from data_processing import *
 
 pd.set_option('display.max_columns', None)
@@ -62,8 +61,6 @@ def parse_pdf_report_for_akm_batches(file_path: str) -> list[Batch]:
                 cur_condition = 0
             elif cur_condition == 2:
                 if len(element) == 3 and element[1] is not None and element[2] != "" and element[1] != "":
-                    # requirements.append(
-                    #     ComponentRequirement(element[1], 1))
                     requirements.append(
                         ComponentRequirement(element[1], float(element[2].replace('.', '').replace(',', '.'))))
             else:
@@ -137,17 +134,8 @@ def parse_excel_report_for_akm_batches(file_name: str) -> list[Batch]:
 
 def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch]) -> ParsedExcelData:
     file_unload = pd.read_excel(excel_file, sheet_name='Выгрузка')
-    # data_columns: list[str] = []
-    # if worker_type == "АКМ":
-    #     data_columns = ['Название замеса', 'Выполнение', 'Ошибка оператора', 'Ошибка превышает 30кг']
-    # elif worker_type == "Миксер":
-    #     file_unload = pd.read_excel(excel_file, sheet_name='Загрузка')
-    #     data_columns = ['Технологическая группа', 'Ошибка оператора, %', 'Ошибка превышает 5%']
-    # elif worker_type == "Погрузчик":
-    #     file_unload = pd.read_excel(excel_file, sheet_name='Загрузка')
-    #     data_columns = ['Технологическая группа', 'Ошибка оператора, %', 'Ошибка превышает 2%']
 
-    date = file_unload.iloc[3, 0][file_unload.iloc[3, 0].find('=') + 2:]
+    date = file_unload.iloc[3, 0][file_unload.iloc[3, 0].find('=') + 2:] if worker_type != "Комбикорм" else ""
     worker_name = file_unload.iloc[2, 0][file_unload.iloc[2, 0].find('=') + 2:]
 
     # We can also automize offsets search later
@@ -165,7 +153,6 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch]) 
     actual_load_weight_w_offset = 21
     # ----------------------------------------------------
 
-    # current_data_row_h_offset = file_unload[file_unload.iloc[:, unloaded_weight_w_offset] == 'Выгружено'].index[0] + 1
     current_data_row_h_offset = 7
 
     cur_batch_index = 0
@@ -180,6 +167,11 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch]) 
 
         case "Погрузчик":
             batch_stats = LoaderBatchStats()
+
+        case "Комбикорм":
+            batch_stats = CombBatchStats()
+            # somehow the indexes are displaced with this type
+            current_data_row_h_offset -= 1
 
     batch_stats_list = []
 
@@ -212,12 +204,6 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch]) 
             ]
 
             if not pd.isna(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]):
-                # cur_tech_group = remove_extra_spaces(
-                #     str(file_unload.iloc[current_data_row_h_offset, batch_group_name_w_offset]).strip())
-                # cur_component_name = remove_extra_spaces(
-                #     str(file_unload.iloc[current_data_row_h_offset, load_components_w_offset]).strip())
-                # cur_comp_req_weight = int(file_unload.iloc[current_data_row_h_offset, req_load_weight_w_offset])
-                # cur_unloaded_weight = int(file_unload.iloc[current_data_row_h_offset, actual_load_weight_w_offset])
 
                 cur_req_weight = batches[cur_batch_index].get_req_weight(components)
                 mistake = batches[cur_batch_index].get_batch_components_mistake(components)
@@ -260,6 +246,24 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch]) 
                 batch_stats = LoaderBatchStats()
                 cur_batch_index += 1
 
+        elif worker_type == "Комбикорм":
+
+            if not pd.isna(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]):
+                cur_req_weight = batches[cur_batch_index].get_req_weight()
+                mistake = batches[cur_batch_index].get_batch_components_mistake()
+                actual_name = batches[cur_batch_index].name
+
+                batch_stats.update_data(actual_name, mistake, cur_req_weight, batches[cur_batch_index].components)
+
+                if current_data_row_h_offset == file_unload.shape[0] - 1 and batch_stats.name != "":
+                    batch_stats_list.append(batch_stats)
+                    batch_stats = CombBatchStats()
+            else:
+                if batch_stats.name != "":
+                    batch_stats_list.append(batch_stats)
+                    batch_stats = CombBatchStats()
+                    cur_batch_index += 1
+
         current_data_row_h_offset += 1
 
     parsed_data2 = ParsedExcelData(batch_stats_list, date, worker_name)
@@ -267,13 +271,12 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch]) 
     return parsed_data2
 
 
-def evaluate_guy(writer, sheet_names: list[str], excel_file: str, pdf_file: str, output_file='result.xlsx',
-                 worker_type='АКМ') -> None:
+def evaluate_guy(writer, sheet_names: list[str], excel_file: str | None, pdf_file: str | None,
+                 worker_type: str) -> None:
     # All parsing
     # --------------------------------------------------------------------------------------
-    planned_batch_list: list[Batch] = parse_pdf_report_for_akm_batches(pdf_file)
-
-    executed_batch_list = parse_excel_report_for_akm_batches(excel_file)
+    planned_batch_list: list[Batch] = [] if pdf_file is None else parse_pdf_report_for_akm_batches(pdf_file)
+    executed_batch_list: list[Batch] = [] if excel_file is None else parse_excel_report_for_akm_batches(excel_file)
 
     excel_parsed_data_list: list[ParsedExcelData] = []
 
@@ -284,6 +287,10 @@ def evaluate_guy(writer, sheet_names: list[str], excel_file: str, pdf_file: str,
         excel_parsed_data_list.append(parse_excel_report(excel_file, "Миксер", executed_batch_list))
         excel_parsed_data_list.append(parse_excel_report(excel_file, "Погрузчик", executed_batch_list))
         sheet_names = ["Миксер", "Погрузчик"]
+
+    elif worker_type == "Комбикорм":
+        excel_parsed_data_list.append(parse_excel_report(excel_file, worker_type, executed_batch_list))
+
     else:
         print("Incorrect worker_type")
         return
@@ -302,9 +309,11 @@ if __name__ == '__main__':
 
     output_file = 'WorkerAnalysisResult.xlsx'
     config_file = 'workers.json'
+
     if not os.path.exists(config_file):
         print(f"Config file doesn't exist! It is expected to be found here: {config_file}")
-    with open(config_file, 'r', encoding='utf-8') as file:
+
+    with (open(config_file, 'r', encoding='utf-8') as file):
         config_json = json.load(file)
         standard_sheet_number = 1
         any_data_written = False
@@ -315,8 +324,9 @@ if __name__ == '__main__':
                 excelReportFile: str = worker['excelReportFile']
                 pdfReportFile: str = worker['pdfReportFile']
                 worker_type = worker['type']
-                if os.path.exists(excelReportFile and pdfReportFile):
-                    evaluate_guy(writer, [worker_name], excelReportFile, pdfReportFile, output_file, worker_type)
+                if (excelReportFile is None or os.path.exists(excelReportFile)) and (
+                        pdfReportFile is None or os.path.exists(pdfReportFile)):
+                    evaluate_guy(writer, [worker_name], excelReportFile, pdfReportFile, worker_type)
                     any_data_written = True
                     print("Worker " + worker_name + " evaluated")
                 else:
