@@ -139,11 +139,14 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch]) 
     worker_name = file_unload.iloc[2, 0][file_unload.iloc[2, 0].find('=') + 2:]
 
     # We can also automize offsets search later
-    # offsets for unload (AKM)
+    # offsets for unload
     # ----------------------------------------------------
     tech_group_name_w_offset = 5
     indicator_weight_w_offset = 10
     unloaded_weight_w_offset = 11
+    # for Comb
+    start_time_w_offset = 15
+    end_time_w_offset = 16
     # ----------------------------------------------------
     # offsets for load (Others)
     # ----------------------------------------------------
@@ -175,96 +178,108 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch]) 
 
     batch_stats_list = []
 
-    while current_data_row_h_offset < file_unload.shape[0]:
-        if worker_type == "АКМ":
-            if type(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]) == int:
-                cur_indicator_weight = int(file_unload.iloc[current_data_row_h_offset, indicator_weight_w_offset])
-                cur_unloaded_weight = int(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset])
-                mistake = cur_unloaded_weight - cur_indicator_weight
-                actual_name = batches[cur_batch_index].name
+    # We do not care about unloads, only about loads here
+    if worker_type == "Комбикорм":
+        for batch in batches:
+            cur_req_weight = batch.get_req_weight()
+            mistakes = batch.get_batch_components_mistakes_list()
+            actual_name = batch.name
+            comps = batch.components
 
-                batch_stats.update_data(actual_name, mistake, cur_indicator_weight, batches[cur_batch_index].components)
+            start_time = file_unload.iloc[current_data_row_h_offset, start_time_w_offset] \
+                if current_data_row_h_offset < file_unload.shape[0] else "-"
+            end_time = file_unload.iloc[current_data_row_h_offset, end_time_w_offset] \
+                if current_data_row_h_offset < file_unload.shape[0] else "-"
 
-                if current_data_row_h_offset == file_unload.shape[0] - 1:
+            batch_stats.update_data(
+                actual_name,
+                weight=cur_req_weight,
+                components=comps,
+                mistakes=mistakes,
+                start_time=start_time,
+                end_time=end_time
+            )
+
+            batch_stats_list.append(batch_stats)
+            batch_stats = CombBatchStats()
+
+            current_data_row_h_offset += 2
+
+    # Parsing through the unload report
+    else:
+        while current_data_row_h_offset < file_unload.shape[0]:
+            if worker_type == "АКМ":
+                if type(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]) == int:
+                    cur_indicator_weight = int(file_unload.iloc[current_data_row_h_offset, indicator_weight_w_offset])
+                    cur_unloaded_weight = int(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset])
+                    mistake = cur_unloaded_weight - cur_indicator_weight
+                    actual_name = batches[cur_batch_index].name
+
+                    batch_stats.update_data(actual_name, mistake, cur_indicator_weight,
+                                            batches[cur_batch_index].components)
+
+                    if current_data_row_h_offset == file_unload.shape[0] - 1:
+                        batch_stats_list.append(batch_stats)
+                        batch_stats = AKMBatchStats()
+
+                else:
                     batch_stats_list.append(batch_stats)
                     batch_stats = AKMBatchStats()
-
-            else:
-                batch_stats_list.append(batch_stats)
-                batch_stats = AKMBatchStats()
-                cur_batch_index += 1
-
-        elif worker_type == "Миксер":
-
-            components = [
-                "К/корм СУХ1",
-                "К/корм Высокий",
-                "Патока",
-                "Вода",
-            ]
-
-            if not pd.isna(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]):
-
-                cur_req_weight = batches[cur_batch_index].get_req_weight(components)
-                mistake = batches[cur_batch_index].get_batch_components_mistake(components)
-                actual_name = batches[cur_batch_index].name
-
-                batch_stats.update_data(actual_name, mistake, cur_req_weight, batches[cur_batch_index].components)
-
-                if current_data_row_h_offset == file_unload.shape[0] - 1:
-                    batch_stats_list.append(batch_stats)
-                    batch_stats = MixerBatchStats()
-            else:
-                batch_stats_list.append(batch_stats)
-                batch_stats = MixerBatchStats()
-                cur_batch_index += 1
-
-        elif worker_type == "Погрузчик":
-
-            components = [
-                "Солома Пш",
-                "Сенаж яма",
-                "Силос Тукаевский",
-                "Силос",
-                "Смесь мясо+барда",
-                "Сухая Барда",
-                "Рапс.шрот",
-                "Птичья мука",
-            ]
-            if not pd.isna(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]):
-                cur_req_weight = batches[cur_batch_index].get_req_weight(components)
-                mistake = batches[cur_batch_index].get_batch_components_mistake(components)
-                actual_name = batches[cur_batch_index].name
-
-                batch_stats.update_data(actual_name, mistake, cur_req_weight, batches[cur_batch_index].components)
-
-                if current_data_row_h_offset == file_unload.shape[0] - 1:
-                    batch_stats_list.append(batch_stats)
-                    batch_stats = LoaderBatchStats()
-            else:
-                batch_stats_list.append(batch_stats)
-                batch_stats = LoaderBatchStats()
-                cur_batch_index += 1
-
-        elif worker_type == "Комбикорм":
-
-            if not pd.isna(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]):
-                cur_req_weight = batches[cur_batch_index].get_req_weight()
-                mistake = batches[cur_batch_index].get_batch_components_mistake()
-                actual_name = batches[cur_batch_index].name
-
-                batch_stats.update_data(actual_name, mistake, cur_req_weight, batches[cur_batch_index].components)
-
-                if current_data_row_h_offset == file_unload.shape[0] - 1 and batch_stats.name != "":
-                    batch_stats_list.append(batch_stats)
-                    batch_stats = CombBatchStats()
-            else:
-                if batch_stats.name != "":
-                    batch_stats_list.append(batch_stats)
-                    batch_stats = CombBatchStats()
                     cur_batch_index += 1
 
-        current_data_row_h_offset += 1
+            elif worker_type == "Миксер":
+
+                components = [
+                    "К/корм СУХ1",
+                    "К/корм Высокий",
+                    "Патока",
+                    "Вода",
+                ]
+
+                if not pd.isna(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]):
+
+                    cur_req_weight = batches[cur_batch_index].get_req_weight(components)
+                    mistake = batches[cur_batch_index].get_batch_components_mistake(components)
+                    actual_name = batches[cur_batch_index].name
+
+                    batch_stats.update_data(actual_name, mistake, cur_req_weight, batches[cur_batch_index].components)
+
+                    if current_data_row_h_offset == file_unload.shape[0] - 1:
+                        batch_stats_list.append(batch_stats)
+                        batch_stats = MixerBatchStats()
+                else:
+                    batch_stats_list.append(batch_stats)
+                    batch_stats = MixerBatchStats()
+                    cur_batch_index += 1
+
+            elif worker_type == "Погрузчик":
+
+                components = [
+                    "Солома Пш",
+                    "Сенаж яма",
+                    "Силос Тукаевский",
+                    "Силос",
+                    "Смесь мясо+барда",
+                    "Сухая Барда",
+                    "Рапс.шрот",
+                    "Птичья мука",
+                ]
+                if not pd.isna(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]):
+                    cur_req_weight = batches[cur_batch_index].get_req_weight(components)
+                    mistake = batches[cur_batch_index].get_batch_components_mistake(components)
+                    actual_name = batches[cur_batch_index].name
+
+                    batch_stats.update_data(actual_name, mistake, cur_req_weight, batches[cur_batch_index].components)
+
+                    if current_data_row_h_offset == file_unload.shape[0] - 1:
+                        batch_stats_list.append(batch_stats)
+                        batch_stats = LoaderBatchStats()
+                else:
+                    batch_stats_list.append(batch_stats)
+                    batch_stats = LoaderBatchStats()
+                    cur_batch_index += 1
+
+            current_data_row_h_offset += 1
 
     parsed_data2 = ParsedExcelData(batch_stats_list, date, worker_name)
 

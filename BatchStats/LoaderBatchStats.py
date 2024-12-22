@@ -4,8 +4,8 @@ from batch import ComponentRequirement
 
 class LoaderBatchStats(BasicBatchStats):
     def __init__(self, name: str = "", mistake: float = infinity, weight: float = infinity,
-                 components: list[ComponentRequirement] = None):
-        super().__init__(name, mistake, weight, components)
+                 components: list[ComponentRequirement] = None, mistakes: list[float] = None):
+        super().__init__(name, mistake, weight, components, mistakes)
 
     def quality_check(self) -> bool:
         return self.get_abs_mistake_percentage() <= 2

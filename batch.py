@@ -2,7 +2,8 @@ from support_funcs import *
 
 
 class ComponentRequirement:
-    def __init__(self, name: str, amount: float, corrected_amount: float = -1, actually_loaded_amount: float = -1) -> None:
+    def __init__(self, name: str, amount: float, corrected_amount: float = -1,
+                 actually_loaded_amount: float = -1) -> None:
         self.name = name
         self.amount = amount
         self.corrected_amount = corrected_amount
@@ -20,6 +21,14 @@ class ComponentRequirement:
         return remove_extra_spaces(self.name.strip()) == remove_extra_spaces(other.name.strip()) and abs(
             self.amount - other.amount) / (
                 (self.amount + other.amount) / 2) < 0.05
+
+    def get_absolute_component_mistake(self) -> float:
+        return self.actually_loaded_amount - self.corrected_amount
+
+    def get_mistake_percentage(self) -> float:
+        if self.corrected_amount == 0:
+            return 0
+        return self.get_absolute_component_mistake() / self.corrected_amount * 100
 
     name: str
     amount: float
@@ -78,8 +87,13 @@ class Batch:
 
     # Returns the load mistake of all components in a batch if no filter provided.
     # Otherwise, only for the components found in the filter.
-    def get_batch_components_mistake(self, filter: list[str] = []) -> float:
-        return self.get_actual_weight(filter) - self.get_req_weight(filter)
+    def get_batch_components_mistake(self, filter: list[str] = None) -> float:
+        return sum(self.get_batch_components_mistakes_list(filter))
+        # return self.get_actual_weight(filter) - self.get_req_weight(filter)
+
+    def get_batch_components_mistakes_list(self, filter: list[str] = None) -> list[float]:
+        return [component.actually_loaded_amount - component.corrected_amount for component in self.components
+                if filter is None or component.name in filter]
 
     name: str
     components: list[ComponentRequirement]

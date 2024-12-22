@@ -17,7 +17,7 @@ mark_translation = {
     "plan_batch_count": "Запланированных замесов",
     "executed_batch_count": "Выполненных замесов из плана",
     "executed_batch_count_all": "Всего выполненных замесов",
-    "executed_batch_count_all_no_mistake": "Всего выполненных замесов без ошибки",
+    "executed_batch_count_all_no_mistake": "Всего выполненных замесов с допустимой ошибкой",
     "plan_completion": 'Выполнение плана',
     "correct_batches_percent": "Процент замесов без превышения ошибки",
     "load_mark": 'Оценка выгрузки',
@@ -131,6 +131,18 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
 
         for batch_stat in ped.batch_stats:
             processed_data[cur_y][0] = batch_stat.name
+            processed_data[cur_y][1] = round(batch_stat.abs_mistake, 2)
+            processed_data[cur_y][2] = round(batch_stat.get_abs_mistake_percentage(), 2)
+
+            bggst_abs_mstk_comp = batch_stat.get_component_with_the_biggest_absolute_mistake()
+            bggst_mstk_perc_comp = batch_stat.get_component_with_the_biggest_mistake_percentage()
+            processed_data[cur_y][3] = bggst_abs_mstk_comp.name + ": " + str(
+                round(bggst_mstk_perc_comp.get_absolute_component_mistake(), 2)) + "кг"
+            processed_data[cur_y][4] = bggst_mstk_perc_comp.name + ": " + str(
+                round(bggst_mstk_perc_comp.get_mistake_percentage(), 2)) + "%"
+
+            processed_data[cur_y][5] = batch_stat.start_time
+            processed_data[cur_y][6] = batch_stat.end_time
 
             cur_y += 1
     else:
@@ -282,6 +294,10 @@ def imprint_marks(marks: dict, data_columns: list[str], processed_data: list[lis
             else relevant_mark_name
         processed_data[cur_y][x_bias] = mark_name
         mark_data = marks[relevant_mark_name]
+
+        if isinstance(mark_data, float):
+            mark_data = round(mark_data, 2)
+
         if type(mark_data) == list:
             processed_data[cur_y][x_bias + 1: x_bias + 1 + len(mark_data)] = mark_data
         else:

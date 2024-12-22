@@ -9,7 +9,7 @@ infinity: float = 100000000000000
 class BasicBatchStats:
 
     def __init__(self, name: str = "", mistake: float = infinity, weight: float = infinity,
-                 components: ComponentRequirement = None):
+                 components: ComponentRequirement = None, mistakes=list[float]):
         self.name: str
         self.weights: list[float] = []
         self.overall_weight: float = 0.0
@@ -34,9 +34,14 @@ class BasicBatchStats:
         return self.name < other.name
 
     def update_data(self, name: str = "", mistake: float = infinity, weight: float = infinity,
-                    components: list[ComponentRequirement] = None):
+                    components: list[ComponentRequirement] = None, mistakes: list[float] = None) -> None:
 
         self.name = name
+
+        if mistakes is not None:
+            for mistake in mistakes:
+                self.mistakes.append(mistake)
+                self.abs_mistake += abs(mistake)
 
         if mistake != infinity:
             self.mistakes.append(mistake)
@@ -62,3 +67,30 @@ class BasicBatchStats:
         if self.overall_weight == 0:
             return 0
         return self.abs_mistake / self.overall_weight * 100
+
+    # biggest mistake of any component at an absolute value in kg
+    def get_component_with_the_biggest_absolute_mistake(self) -> ComponentRequirement:
+        req_component = None
+
+        for component in self.components:
+            if req_component is None:
+                req_component = component
+            else:
+                if abs(req_component.get_absolute_component_mistake()) < abs(
+                        component.get_absolute_component_mistake()):
+                    req_component = component
+
+        return req_component
+
+    # biggest mistake of any component percentage wise
+    def get_component_with_the_biggest_mistake_percentage(self) -> ComponentRequirement:
+        req_component = None
+
+        for component in self.components:
+            if req_component is None:
+                req_component = component
+            else:
+                if abs(req_component.get_mistake_percentage()) < abs(component.get_mistake_percentage()):
+                    req_component = component
+
+        return req_component
