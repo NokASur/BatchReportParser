@@ -1,4 +1,4 @@
-from BatchStats.BasicBatchStats import BasicBatchStats
+from BatchStats.basic_batch_stats import BasicBatchStats
 
 
 class ParsedExcelData:

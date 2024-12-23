@@ -6,6 +6,7 @@ import pdfplumber
 import json
 import os
 
+from Batch.comb_batch import CombBatch
 from data_processing import *
 
 pd.set_option('display.max_columns', None)
@@ -75,7 +76,7 @@ def parse_pdf_report_for_akm_batches(file_path: str) -> list[Batch]:
 
 
 # Function finds the batches that are actually done during the day
-def parse_excel_report_for_akm_batches(file_name: str) -> list[Batch]:
+def parse_excel_report_for_akm_batches(file_name: str, worker_type: str) -> list[Batch]:
     file = pd.read_excel(file_name, sheet_name='Загрузка')
 
     # do not change != to is not, pandas is cooked
@@ -88,14 +89,19 @@ def parse_excel_report_for_akm_batches(file_name: str) -> list[Batch]:
     batch_cmp_weight_req_w_offset = 17
     batch_cmp_weight_req_w_offset_corrected = 20
     batch_cmp_actual_loaded_weight = 21
+    # comb_batch
+    # ----------------------------------------------------
+    batch_time_finish_w_offset = 4
     # ----------------------------------------------------
     batch_list: list[Batch] = []
     name = ""
+    end_time = ""
     requirements: list[ComponentRequirement] = []
 
     while current_data_row_h_offset < file.shape[0]:
         batch_name = (file.iloc[current_data_row_h_offset, batch_name_w_offset])
         if pd.notna(batch_name):
+            batch_end_time = file.iloc[current_data_row_h_offset, batch_time_finish_w_offset]
             batch_name = remove_extra_spaces(batch_name.strip())
             component_name = file.iloc[current_data_row_h_offset, batch_cmp_name_w_offset]
             component_weight_req = file.iloc[current_data_row_h_offset, batch_cmp_weight_req_w_offset]
@@ -114,16 +120,24 @@ def parse_excel_report_for_akm_batches(file_name: str) -> list[Batch]:
 
             if batch_name != name:
                 name = batch_name
+                end_time = batch_end_time
         else:
             if name != "":
-                new_batch = Batch(name, requirements)
+                if worker_type == "Комбикорм":
+                    new_batch = CombBatch(name, requirements, end_time)
+                else:
+                    new_batch = Batch(name, requirements)
                 if new_batch.is_significant():
                     batch_list.append(new_batch)
                 name = ""
+                end_time = ""
                 requirements: list[ComponentRequirement] = []
 
         if current_data_row_h_offset == file.shape[0] - 1:
-            new_batch = Batch(name, requirements)
+            if worker_type == "Комбикорм":
+                new_batch = CombBatch(name, requirements, end_time)
+            else:
+                new_batch = Batch(name, requirements)
             if new_batch.is_significant():
                 batch_list.append(new_batch)
 
@@ -132,7 +146,7 @@ def parse_excel_report_for_akm_batches(file_name: str) -> list[Batch]:
     return batch_list
 
 
-def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch]) -> ParsedExcelData:
+def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch | CombBatch]) -> ParsedExcelData:
     file_unload = pd.read_excel(excel_file, sheet_name='Выгрузка')
 
     date = file_unload.iloc[3, 0][file_unload.iloc[3, 0].find('=') + 2:] if worker_type != "Комбикорм" else ""
@@ -180,16 +194,28 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch]) 
 
     # We do not care about unloads, only about loads here
     if worker_type == "Комбикорм":
+
+        finish_start_batch_times_dict: dict[str, str] = {}
+
+        while current_data_row_h_offset < file_unload.shape[0]:
+            start_time = file_unload.iloc[current_data_row_h_offset, start_time_w_offset] \
+                if current_data_row_h_offset < file_unload.shape[0] else "-"
+            end_time = file_unload.iloc[current_data_row_h_offset, end_time_w_offset] \
+                if current_data_row_h_offset < file_unload.shape[0] else "-"
+            finish_start_batch_times_dict[end_time] = start_time
+            current_data_row_h_offset += 2
+
         for batch in batches:
             cur_req_weight = batch.get_req_weight()
             mistakes = batch.get_batch_components_mistakes_list()
             actual_name = batch.name
             comps = batch.components
 
-            start_time = file_unload.iloc[current_data_row_h_offset, start_time_w_offset] \
-                if current_data_row_h_offset < file_unload.shape[0] else "-"
-            end_time = file_unload.iloc[current_data_row_h_offset, end_time_w_offset] \
-                if current_data_row_h_offset < file_unload.shape[0] else "-"
+            start_time = ""
+            if batch.end_time in finish_start_batch_times_dict:
+                start_time = finish_start_batch_times_dict[batch.end_time]
+
+            end_time = batch.end_time
 
             batch_stats.update_data(
                 actual_name,
@@ -202,8 +228,6 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch]) 
 
             batch_stats_list.append(batch_stats)
             batch_stats = CombBatchStats()
-
-            current_data_row_h_offset += 2
 
     # Parsing through the unload report
     else:
@@ -291,7 +315,8 @@ def evaluate_guy(writer, sheet_names: list[str], excel_file: str | None, pdf_fil
     # All parsing
     # --------------------------------------------------------------------------------------
     planned_batch_list: list[Batch] = [] if pdf_file is None else parse_pdf_report_for_akm_batches(pdf_file)
-    executed_batch_list: list[Batch] = [] if excel_file is None else parse_excel_report_for_akm_batches(excel_file)
+    executed_batch_list: list[Batch] = [] if excel_file is None else parse_excel_report_for_akm_batches(excel_file,
+                                                                                                        worker_type)
 
     excel_parsed_data_list: list[ParsedExcelData] = []
 

@@ -1,11 +1,11 @@
 from parsed_excel_data import *
-from batch import *
-from BatchStats.AKMBatchStats import AKMBatchStats
-from BatchStats.BasicBatchStats import BasicBatchStats
-from BatchStats.MixerBatchStats import MixerBatchStats
-from BatchStats.LoaderBatchStats import LoaderBatchStats
-from BatchStats.CombBatchStats import CombBatchStats
-from support_funcs import concatenate_list_values, imprint_meta_values_to_sheet
+from Batch.batch import *
+from BatchStats.akm_batch_stats import AKMBatchStats
+from BatchStats.basic_batch_stats import BasicBatchStats
+from BatchStats.mixer_batch_stats import MixerBatchStats
+from BatchStats.loader_batch_stats import LoaderBatchStats
+from BatchStats.comb_batch_stats import CombBatchStats
+from support_funcs import concatenate_list_values
 from queue import Queue
 
 # Affected size of the Excel sheet
@@ -140,6 +140,9 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
                 round(bggst_mstk_perc_comp.get_absolute_component_mistake(), 2)) + "кг"
             processed_data[cur_y][4] = bggst_mstk_perc_comp.name + ": " + str(
                 round(bggst_mstk_perc_comp.get_mistake_percentage(), 2)) + "%"
+
+            if not batch_stat.start_time or not batch_stat.end_time:
+                marks["computer_use_mark"] = "-"
 
             processed_data[cur_y][5] = batch_stat.start_time
             processed_data[cur_y][6] = batch_stat.end_time
