@@ -366,7 +366,12 @@ if __name__ == '__main__':
                 worker_type = worker['type']
                 if (excelReportFile is None or os.path.exists(excelReportFile)) and (
                         pdfReportFile is None or os.path.exists(pdfReportFile)):
-                    evaluate_guy(writer, [worker_name], excelReportFile, pdfReportFile, worker_type)
+                    try:
+                        evaluate_guy(writer, [worker_name], excelReportFile, pdfReportFile, worker_type)
+                    except Exception as e:
+                        print("Evaluation for " + worker_name + " failed.")
+                        print("Reason: ", e.args[0])
+                        continue
                     any_data_written = True
                     print("Worker " + worker_name + " evaluated")
                 else:
@@ -379,4 +384,4 @@ if __name__ == '__main__':
                 ]).to_excel(writer, index=False, header=False, sheet_name='Пустой')
 
     print(f"Данные успешно сохранены в {output_file}")
-    time.sleep(1)
+    time.sleep(2)
