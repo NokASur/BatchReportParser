@@ -36,5 +36,20 @@ def adjust_excel_cells_length(writer, sheet_name: str):
                 if cell.value:
                     max_length = max(max_length, len(str(cell.value)))
             except Exception as e:
-                print(f"Ошибка при обработке ячейки: {e}")
+                print(f"Mistake while adjusting cell: {e}")
         sheet.column_dimensions[column_letter].width = max_length + 5
+
+
+# for now just checks if there are only "кызыл", "армян" named batches in mistakes,
+# as they are deemed unimportant and should not be punished
+def only_unimportant_mistakes(mistakes: list[str]) -> bool:
+    unimportant_names = ["кызыл", "армян"]
+    for mistake in mistakes:
+        good = 0
+        mistake_name = mistake.lower()
+        for unimportant_name in unimportant_names:
+            if unimportant_name in mistake_name:
+                good = 1
+        if good == 0:
+            return False
+    return True

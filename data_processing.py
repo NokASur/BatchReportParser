@@ -113,6 +113,8 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
     quality_batches = 0
     batch_stats_dict = get_batch_stats_dict(ped)
 
+    mistake_batch_names: list[str] = []
+
     batch_type = "BasicBatchStats"
 
     for batch_stat in ped.batch_stats:
@@ -173,6 +175,7 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
                             processed_data[cur_y][3] = "-"
                     else:
                         processed_data[cur_y][1] = "-"
+                        mistake_batch_names.append(batch.name)
                         processed_data[cur_y][2] = "0"
                         processed_data[cur_y][3] = "+"
 
@@ -194,6 +197,7 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
                             processed_data[cur_y][4] = "-"
                     else:
                         processed_data[cur_y][1] = "-"
+                        mistake_batch_names.append(batch.name)
                         processed_data[cur_y][2] = "0"
                         processed_data[cur_y][3] = "0"
                         processed_data[cur_y][4] = "+"
@@ -216,6 +220,7 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
                             processed_data[cur_y][4] = "-"
                     else:
                         processed_data[cur_y][1] = "-"
+                        mistake_batch_names.append(batch.name)
                         processed_data[cur_y][2] = "0"
                         processed_data[cur_y][3] = "0"
                         processed_data[cur_y][4] = "+"
@@ -225,7 +230,11 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
     marks["executed_batch_count"] = completed_batches
     marks["executed_batch_count_all"] = completed_batches_all
     marks["executed_batch_count_all_no_mistake"] = quality_batches
-    if completed_batches == len(pdf):
+
+    # if completed_batches == len(pdf):
+    #     marks["plan_completion"] = "+"
+
+    if only_unimportant_mistakes(mistake_batch_names):
         marks["plan_completion"] = "+"
 
     if completed_batches_all != 0:
@@ -238,6 +247,8 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
 
     if batch_type == "LoaderBatchStats" and marks["correct_batches_percent"] >= 70:
         marks['loader_mark'] = '+'
+
+    mistake_batches = get_incorrect_batches_list(ped, pdf)
 
     marks["incorrect_batches"] = get_incorrect_batches_list(ped, pdf)
     if len(marks["incorrect_batches"]) > 0:
