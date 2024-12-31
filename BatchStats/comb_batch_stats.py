@@ -12,7 +12,7 @@ class CombBatchStats(BasicBatchStats):
         self.update_data(start_time=start_time, end_time=end_time)
 
     def quality_check(self) -> bool:
-        return self.get_abs_mistake_percentage() <= 1.5
+        return self.get_abs_mistake_percentage() <= 2
 
     def update_data(self, name: str = "", mistake: float = infinity, weight: float = infinity,
                     components: list[ComponentRequirement] = None, mistakes: list[float] = None, start_time: str = None,

@@ -140,8 +140,10 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
             bggst_mstk_perc_comp = batch_stat.get_component_with_the_biggest_mistake_percentage()
             processed_data[cur_y][3] = bggst_abs_mstk_comp.name + ": " + str(
                 round(bggst_mstk_perc_comp.get_absolute_component_mistake(), 2)) + "кг"
-            processed_data[cur_y][4] = bggst_mstk_perc_comp.name + ": " + str(
-                round(bggst_mstk_perc_comp.get_mistake_percentage(), 2)) + "%"
+            processed_data[cur_y][4] = (
+                    bggst_mstk_perc_comp.name + ": " +
+                    str(round(bggst_mstk_perc_comp.get_mistake_percentage(), 2)) + "%, " +
+                    str(round(bggst_mstk_perc_comp.get_absolute_component_mistake(), 2)) + "кг")
 
             if not batch_stat.start_time or not batch_stat.end_time:
                 marks["computer_use_mark"] = "-"
@@ -231,11 +233,11 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
     marks["executed_batch_count_all"] = completed_batches_all
     marks["executed_batch_count_all_no_mistake"] = quality_batches
 
-    # if completed_batches == len(pdf):
-    #     marks["plan_completion"] = "+"
-
-    if only_unimportant_mistakes(mistake_batch_names):
+    if completed_batches == len(pdf):
         marks["plan_completion"] = "+"
+
+    # if only_unimportant_mistakes(mistake_batch_names):
+    #     marks["plan_completion"] = "+"
 
     if completed_batches_all != 0:
         marks["correct_batches_percent"] = quality_batches / completed_batches_all * 100
@@ -251,8 +253,12 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
     mistake_batches = get_incorrect_batches_list(ped, pdf)
 
     marks["incorrect_batches"] = get_incorrect_batches_list(ped, pdf)
-    if len(marks["incorrect_batches"]) > 0:
+
+    if only_unimportant_mistakes(mistake_batch_names) is False:
         marks["update_received"] = '-'
+
+    # if len(marks["incorrect_batches"]) > 0:
+    #     marks["update_received"] = '-'
 
 
 # Returns every completed batch that was not planned
