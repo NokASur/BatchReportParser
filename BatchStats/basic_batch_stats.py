@@ -16,7 +16,7 @@ class BasicBatchStats:
         self.mistakes: list[float] = []
         self.abs_mistake: float = 0.0
         self.components: list[ComponentRequirement] = []
-
+        self.loader_mistakes: list[float] = []
         self.update_data(name, mistake, weight, components)
 
     def __str__(self):
@@ -34,7 +34,8 @@ class BasicBatchStats:
         return self.name < other.name
 
     def update_data(self, name: str = "", mistake: float = infinity, weight: float = infinity,
-                    components: list[ComponentRequirement] = None, mistakes: list[float] = None) -> None:
+                    components: list[ComponentRequirement] = None, mistakes: list[float] = None,
+                    loader_mistakes: list[float] = None) -> None:
 
         self.name = name
 
@@ -42,6 +43,10 @@ class BasicBatchStats:
             for mistake in mistakes:
                 self.mistakes.append(mistake)
                 self.abs_mistake += abs(mistake)
+
+        if loader_mistakes is not None:
+            for loader_mistake in loader_mistakes:
+                self.loader_mistakes.append(loader_mistake)
 
         if mistake != infinity:
             self.mistakes.append(mistake)

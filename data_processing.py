@@ -175,11 +175,13 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
                             processed_data[cur_y][3] = "+"
                         else:
                             processed_data[cur_y][3] = "-"
+                        processed_data[cur_y][4] = concatenate_list_values(affiliated_stats.loader_mistakes)
                     else:
                         processed_data[cur_y][1] = "-"
                         mistake_batch_names.append(batch.name)
                         processed_data[cur_y][2] = "0"
                         processed_data[cur_y][3] = "+"
+                        processed_data[cur_y][4] = "0"
 
                     cur_y += 1
                 case "MixerBatchStats":
@@ -354,6 +356,7 @@ def generate_data_columns(ped: ParsedExcelData) -> list[str]:
                 "Выполнение",
                 "Ошибка оператора",
                 "Ошибка не превышает 30кг",
+                "Ошибка погрузчика при загрузке в АКМ"
             ]
         case "MixerBatchStats":
             columns = [

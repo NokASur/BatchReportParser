@@ -155,9 +155,10 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch | 
     # We can also automize offsets search later
     # offsets for unload
     # ----------------------------------------------------
-    tech_group_name_w_offset = 5
-    indicator_weight_w_offset = 10
+    loader_weight_w_offset = 8
     unloaded_weight_w_offset = 11
+    # for loader
+    indicator_loader_w_offset = 7
     # for Comb
     start_time_w_offset = 15
     end_time_w_offset = 16
@@ -176,7 +177,7 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch | 
 
     batch_stats = BasicBatchStats()
     match worker_type:
-        case "AKM":
+        case "АКМ":
             batch_stats = AKMBatchStats()
 
         case "Миксер":
@@ -233,14 +234,18 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch | 
     else:
         while current_data_row_h_offset < file_unload.shape[0]:
             if worker_type == "АКМ":
-                if type(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]) == int:
-                    cur_indicator_weight = int(file_unload.iloc[current_data_row_h_offset, indicator_weight_w_offset])
+                if not pd.isna(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]):
+                    cur_loader_weight = int(file_unload.iloc[current_data_row_h_offset, loader_weight_w_offset])
                     cur_unloaded_weight = int(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset])
-                    mistake = cur_unloaded_weight - cur_indicator_weight
+                    mistake = cur_unloaded_weight - cur_loader_weight
+                    cur_indexed_loader_weight = int(
+                        file_unload.iloc[current_data_row_h_offset, indicator_loader_w_offset])
+                    mistake_loader = cur_loader_weight - cur_indexed_loader_weight
+
                     actual_name = batches[cur_batch_index].name
 
-                    batch_stats.update_data(actual_name, mistake, cur_indicator_weight,
-                                            batches[cur_batch_index].components)
+                    batch_stats.update_data(actual_name, mistake, cur_loader_weight,
+                                            batches[cur_batch_index].components, loader_mistakes=[mistake_loader])
 
                     if current_data_row_h_offset == file_unload.shape[0] - 1:
                         batch_stats_list.append(batch_stats)

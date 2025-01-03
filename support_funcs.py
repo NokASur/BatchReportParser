@@ -4,10 +4,7 @@ from openpyxl.utils import get_column_letter
 
 
 def concatenate_list_values(l: list) -> str:
-    ans = ""
-    for v in l:
-        ans += str(v) + " "
-    return ans
+    return ", ".join(str(v) for v in l)
 
 
 def remove_extra_spaces(input_string):
