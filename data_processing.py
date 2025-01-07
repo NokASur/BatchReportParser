@@ -139,7 +139,7 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
             bggst_abs_mstk_comp = batch_stat.get_component_with_the_biggest_absolute_mistake()
             bggst_mstk_perc_comp = batch_stat.get_component_with_the_biggest_mistake_percentage()
             processed_data[cur_y][3] = bggst_abs_mstk_comp.name + ": " + str(
-                round(bggst_mstk_perc_comp.get_absolute_component_mistake(), 2)) + "кг"
+                round(bggst_abs_mstk_comp.get_absolute_component_mistake(), 2)) + "кг"
             processed_data[cur_y][4] = (
                     bggst_mstk_perc_comp.name + ": " +
                     str(round(bggst_mstk_perc_comp.get_mistake_percentage(), 2)) + "%, " +
