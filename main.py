@@ -260,6 +260,7 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch | 
 
                 components = [
                     "К/корм СУХ1",
+                    "К/корм Сух 2",
                     "К/корм Высокий",
                     "Патока",
                     "Вода",

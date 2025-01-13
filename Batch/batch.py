@@ -53,12 +53,12 @@ class Batch:
     # Returns the load mistake of all components in a batch if no filter provided.
     # Otherwise, only for the components found in the filter.
     def get_batch_components_mistake(self, filter: list[str] = None) -> float:
-        return sum(self.get_batch_components_mistakes_list(filter))
+        return sum(abs(x) for x in self.get_batch_components_mistakes_list(filter))
         # return self.get_actual_weight(filter) - self.get_req_weight(filter)
 
     def get_batch_components_mistakes_list(self, filter: list[str] = None) -> list[float]:
         return [component.actually_loaded_amount - component.corrected_amount for component in self.components
-                if filter is None or component.name in filter]
+                if filter is None or component.name.strip() in filter]
 
     name: str
     components: list[ComponentRequirement]
