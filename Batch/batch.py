@@ -37,7 +37,7 @@ class Batch:
     def get_req_weight(self, filter: list[str] = []) -> float:
         weight = 0
         for component in self.components:
-            if len(filter) > 0 and component.name in filter or len(filter) == 0:
+            if len(filter) > 0 and component.name.strip() in filter or len(filter) == 0:
                 weight += component.corrected_amount
         return weight
 
