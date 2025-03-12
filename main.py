@@ -1,16 +1,20 @@
-from openpyxl.utils import get_column_letter
-
 import pandas as pd
 import time
 import pdfplumber
-import json
 import os
 
 from Batch.comb_batch import CombBatch
 from data_processing import *
+from support_funcs import *
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
+
+OUTPUT_FILE = 'worker_analysis_result.xlsx'
+CONFIG_FILE = 'workers.json'
+
+MIXER_COMPONENTS_FILE = "mixer_components.json"
+MIXER_COMPONENTS = load_mixer_components(MIXER_COMPONENTS_FILE)
 
 
 def append_data_row(data: list, data_rows: list, tech_groups_count: int, good_tech_groups_count: int) -> tuple[
@@ -258,21 +262,14 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch | 
 
             elif worker_type == "Миксер":
 
-                components = [
-                    "К/корм СУХ1",
-                    "К/корм Сух 2",
-                    "К/корм Высокий",
-                    "Патока",
-                    "Вода",
-                ]
-
                 if not pd.isna(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]):
 
-                    cur_req_weight = batches[cur_batch_index].get_req_weight(components)
-                    mistake = batches[cur_batch_index].get_batch_components_mistake(components)
+                    cur_req_weight = batches[cur_batch_index].get_req_weight(MIXER_COMPONENTS)
+                    mistake = batches[cur_batch_index].get_batch_components_mistake(MIXER_COMPONENTS)
                     actual_name = batches[cur_batch_index].name
 
-                    batch_stats.update_data(actual_name, mistake, cur_req_weight, batches[cur_batch_index].components)
+                    batch_stats.update_data(actual_name, mistake, cur_req_weight,
+                                            batches[cur_batch_index].components)
 
                     if current_data_row_h_offset == file_unload.shape[0] - 1:
                         batch_stats_list.append(batch_stats)
@@ -284,19 +281,9 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch | 
 
             elif worker_type == "Погрузчик":
 
-                components = [
-                    "Солома Пш",
-                    "Сенаж яма",
-                    "Силос Тукаевский",
-                    "Силос",
-                    "Смесь мясо+барда",
-                    "Сухая Барда",
-                    "Рапс.шрот",
-                    "Птичья мука",
-                ]
                 if not pd.isna(file_unload.iloc[current_data_row_h_offset, unloaded_weight_w_offset]):
-                    cur_req_weight = batches[cur_batch_index].get_req_weight(components)
-                    mistake = batches[cur_batch_index].get_batch_components_mistake(components)
+                    cur_req_weight = batches[cur_batch_index].get_req_weight(MIXER_COMPONENTS, inversed=True)
+                    mistake = batches[cur_batch_index].get_batch_components_mistake(MIXER_COMPONENTS, inversed=True)
                     actual_name = batches[cur_batch_index].name
 
                     batch_stats.update_data(actual_name, mistake, cur_req_weight, batches[cur_batch_index].components)
@@ -353,18 +340,15 @@ def evaluate_guy(writer, sheet_names: list[str], excel_file: str | None, pdf_fil
 
 if __name__ == '__main__':
 
-    output_file = 'WorkerAnalysisResult.xlsx'
-    config_file = 'workers.json'
+    if not os.path.exists(CONFIG_FILE):
+        print(f"Config file doesn't exist! It is expected to be found here: {CONFIG_FILE}")
 
-    if not os.path.exists(config_file):
-        print(f"Config file doesn't exist! It is expected to be found here: {config_file}")
-
-    with (open(config_file, 'r', encoding='utf-8') as file):
+    with (open(CONFIG_FILE, 'r', encoding='utf-8') as file):
         config_json = json.load(file)
         standard_sheet_number = 1
         any_data_written = False
 
-        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+        with pd.ExcelWriter(OUTPUT_FILE, engine='openpyxl') as writer:
             for worker in config_json['workers']:
                 worker_name: str = worker['name']
                 excelReportFile: str = worker['excelReportFile']
@@ -389,5 +373,5 @@ if __name__ == '__main__':
                     " Настройте .json файл или измените название файлов."
                 ]).to_excel(writer, index=False, header=False, sheet_name='Пустой')
 
-    print(f"Данные успешно сохранены в {output_file}")
+    print(f"Данные успешно сохранены в {OUTPUT_FILE}")
     time.sleep(2)

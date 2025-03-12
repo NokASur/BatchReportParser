@@ -1,6 +1,11 @@
 import re
-
+import json
 from openpyxl.utils import get_column_letter
+
+
+def load_mixer_components(mixer_components_file: str):
+    with open(mixer_components_file) as components_file:
+        return [component["name"] for component in json.load(components_file)["components"]]
 
 
 def concatenate_list_values(l: list) -> str:

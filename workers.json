@@ -7,12 +7,6 @@
       "type": "АКМ"
     },
     {
-      "name": "Равис",
-      "excelReportFile": "Равис.xls",
-      "pdfReportFile": "Равис.pdf",
-      "type": "АКМ"
-    },
-    {
       "name": "Айрат",
       "excelReportFile": "Айрат.xls",
       "pdfReportFile": "Айрат.pdf",
