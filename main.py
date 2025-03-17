@@ -167,13 +167,6 @@ def parse_excel_report(excel_file: str, worker_type: str, batches: list[Batch | 
     start_time_w_offset = 15
     end_time_w_offset = 16
     # ----------------------------------------------------
-    # offsets for load (Others)
-    # ----------------------------------------------------
-    batch_group_name_w_offset = 1
-    load_components_w_offset = 16
-    req_load_weight_w_offset = 20
-    actual_load_weight_w_offset = 21
-    # ----------------------------------------------------
 
     current_data_row_h_offset = 7
 
@@ -369,9 +362,9 @@ if __name__ == '__main__':
 
             if not any_data_written:
                 pd.DataFrame([
-                    "Ни одной корректной пары репортов не было обнаружено."
-                    " Настройте .json файл или измените название файлов."
-                ]).to_excel(writer, index=False, header=False, sheet_name='Пустой')
+                    "No valid pair of reports were found."
+                    "Customize the .json file or change the file name."
+                ]).to_excel(writer, index=False, header=False, sheet_name='Placeholder')
 
-    print(f"Данные успешно сохранены в {OUTPUT_FILE}")
+    print(f"\nResults are successfully saved into {OUTPUT_FILE}")
     time.sleep(2)

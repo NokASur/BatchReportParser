@@ -259,9 +259,6 @@ def analise_and_imprint_batches(marks: dict, ped: ParsedExcelData, pdf: list[Bat
     if only_unimportant_mistakes(mistake_batch_names) is False:
         marks["update_received"] = '-'
 
-    # if len(marks["incorrect_batches"]) > 0:
-    #     marks["update_received"] = '-'
-
 
 # Returns every completed batch that was not planned
 def get_incorrect_batches_list(ped: ParsedExcelData, pdf: list[Batch]) -> list[str]:
